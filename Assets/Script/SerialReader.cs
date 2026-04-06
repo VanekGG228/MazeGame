@@ -1,20 +1,18 @@
-using System;
+﻿using System;
 using System.IO.Ports;
 using System.Threading;
 using UnityEngine;
 
 public class SerialReader : MonoBehaviour
 {
-    public string portName = "COM8";
+    public string portName = "COM6";
     public int baudRate = 115200;
 
     private SerialPort port;
     private Thread readThread;
     private bool running = false;
 
-    // Ax Ay Az Gx Gy Gz
-    public float[] imu = new float[6];
-
+    public float[] imu = new float[12];
     private readonly object lockObj = new object();
 
     void Start()
@@ -28,6 +26,7 @@ public class SerialReader : MonoBehaviour
             running = true;
 
             readThread = new Thread(ReadLoop);
+            readThread.IsBackground = true; // важно!
             readThread.Start();
 
             Debug.Log($"[Serial] Port {portName} opened at {baudRate} baud.");
@@ -47,7 +46,8 @@ public class SerialReader : MonoBehaviour
             try
             {
                 string data = port.ReadExisting();
-                if (data.Length > 0)
+
+                if (!string.IsNullOrEmpty(data))
                 {
                     leftover += data;
 
@@ -57,58 +57,61 @@ public class SerialReader : MonoBehaviour
                         string line = leftover.Substring(0, pos);
                         leftover = leftover.Substring(pos + 1);
 
-                        //Debug.Log($"[Serial] Received: {line.Trim()}");
+                        line = line.Trim();
 
-                        ParseMessage(line.Trim());
+                        ParseMessage(line);
                     }
                 }
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[Serial] Read error: {e.Message}");
+                // можно оставить, но лучше редко логировать
+                // Debug.LogWarning($"[Serial] Read error: {e.Message}");
             }
 
             Thread.Sleep(2);
         }
     }
 
-
     void ParseMessage(string msg)
     {
-
-        string[] parts = msg.Split(' ');
-        if (parts.Length != 6)
-        {
-            Debug.LogWarning($"[Serial] Invalid message: {msg}");
+        if (string.IsNullOrWhiteSpace(msg))
             return;
-        }
 
         try
         {
-            float ax = float.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture);
-            float ay = float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture);
-            float az = float.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture);
+            string[] parts = msg.Split(
+                new[] { ' ' },
+                StringSplitOptions.RemoveEmptyEntries
+            );
 
-            float gx = float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
-            float gy = float.Parse(parts[4], System.Globalization.CultureInfo.InvariantCulture);
-            float gz = float.Parse(parts[5], System.Globalization.CultureInfo.InvariantCulture);
+            if (parts.Length != 12)
+                return;
 
+            float[] values = new float[12];
+
+            for (int i = 0; i < 12; i++)
+            {
+                if (!float.TryParse(parts[i],
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out values[i]))
+                {
+                    return;
+                }
+            }
+            Debug.Log("values: " + string.Join(", ", values));
+            Debug.Log("imu: " + string.Join(", ", imu));
             lock (lockObj)
             {
-                imu[0] = ax;
-                imu[1] = ay;
-                imu[2] = az;
-                imu[3] = gx;
-                imu[4] = gy;
-                imu[5] = gz;
+                for (int i = 0; i < 12; i++)
+                {
+                    imu[i] = values[i];
+                }
             }
-
-            // --- DEBUG ---
-            //Debug.Log($"[Serial] Ax={ax:F2} Ay={ay:F2} Az={az:F2} | Gx={gx:F2} Gy={gy:F2} Gz={gz:F2}");
         }
-        catch (Exception e)
+        catch
         {
-            Debug.LogWarning($"[Serial] Parse error: {msg} | {e.Message}");
         }
     }
 
@@ -123,8 +126,13 @@ public class SerialReader : MonoBehaviour
     void OnDestroy()
     {
         running = false;
-        if (readThread != null) readThread.Join();
-        if (port != null && port.IsOpen) port.Close();
+
+        if (readThread != null && readThread.IsAlive)
+            readThread.Join();
+
+        if (port != null && port.IsOpen)
+            port.Close();
+
         Debug.Log("[Serial] Port closed.");
     }
 }

@@ -1,128 +1,155 @@
-using UnityEngine;
-using TMPro;
+﻿using UnityEngine;
 using System.Collections.Generic;
-using System.IO;
+using TMPro;
 
 public class StatisticsManager : MonoBehaviour
 {
     public static StatisticsManager Instance;
 
-    [Header("UI Elements")]
-    public TextMeshProUGUI collisionsText;
-    public TextMeshProUGUI distanceText;
-    public TextMeshProUGUI speedText;
-
-    [Header("Player")]
-    public GameObject player;
-
-    [Header("Recording Settings")]
-    public float recordInterval = 0.1f; 
-
+    private GameObject player;
     private Rigidbody rb;
-    private Vector3 lastPosition;
-    private int collisions = 0;
-    private float totalDistance = 0f;
-    private float timer = 0f;
 
-    private List<Vector3> trajectory = new List<Vector3>();
-    private List<float> speeds = new List<float>();
+    private float timer;
+    private float levelTime;
+
+    private int collisionCount = 0;
+
+    private float totalSpeed = 0;
+    private int speedSamples = 0;
+    private float maxSpeed = 0;
+
+    private float distance = 0;
+    private Vector3 lastPosition;
+
+    private int sessionId;
+    private int attemptId = -1; // теперь это attemptId
+
+    [Header("Settings")]
+    public float recordInterval = 1f;
+
+    [Header("UI")]
+    public TMP_Text speedText;
+    public TMP_Text collisionText;
+    public TMP_Text timeText;
+
+    private bool recording = false;
 
     void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
         Instance = this;
+    }
 
-        if (player == null)
-        {
-            Debug.LogError("Player не назначен! Перетащи шарик в поле Player в Inspector.");
-        }
-        else
-        {
-            rb = player.GetComponent<Rigidbody>();
-            if (rb == null)
-                Debug.LogError("На player нет Rigidbody!");
-            lastPosition = player.transform.position;
-            trajectory.Add(lastPosition);
-            speeds.Add(0f);
-        }
+    void OnEnable()
+    {
+        EventManager.OnPlayerSpawned += OnPlayerSpawned;
+        EventManager.OnLevelFinished += OnLevelFinished;
+        EventManager.OnLevelFailed += OnLevelFailed;
+    }
+
+    void OnDisable()
+    {
+        EventManager.OnPlayerSpawned -= OnPlayerSpawned;
+        EventManager.OnLevelFinished -= OnLevelFinished;
+        EventManager.OnLevelFailed -= OnLevelFailed;
+    }
+
+    void OnPlayerSpawned(GameObject newPlayer)
+    {
+        player = newPlayer;
+        rb = player.GetComponent<Rigidbody>();
+
+        timer = 0;
+        levelTime = 0;
+        collisionCount = 0;
+        totalSpeed = 0;
+        speedSamples = 0;
+        maxSpeed = 0;
+        distance = 0;
+        lastPosition = player.transform.position;
+
+        // создаем сессию
+        sessionId = DatabaseManager.Instance.CreateSession(1, 1);
+
+        // создаем попытку сразу же
+        DatabaseManager.Instance.InsertAttempt(sessionId, "ongoing", 0, 0);
+        attemptId = DatabaseManager.Instance.GetLastAttemptId(sessionId);
+
+        recording = true;
     }
 
     void Update()
     {
-        if (rb == null) return; 
+        if (!recording || player == null) return;
 
-        Vector3 curPos = rb.transform.position;
-        float frameDist = Vector3.Distance(lastPosition, curPos);
-        totalDistance += frameDist;
-        lastPosition = curPos;
-
-        if (distanceText != null)
-            distanceText.text = "Distance: " + totalDistance.ToString("F2");
-
-        if (speedText != null)
-            speedText.text = "Speed: " + rb.linearVelocity.magnitude.ToString("F2");
-
+        levelTime += Time.deltaTime;
         timer += Time.deltaTime;
+
+        float speed = rb.linearVelocity.magnitude;
+
+        totalSpeed += speed;
+        speedSamples++;
+
+        if (speed > maxSpeed)
+            maxSpeed = speed;
+
+        distance += Vector3.Distance(lastPosition, player.transform.position);
+        lastPosition = player.transform.position;
+
+        UpdateUI(speed);
+
+        // записываем точку траектории каждые recordInterval секунд
         if (timer >= recordInterval)
         {
-            trajectory.Add(curPos);
-            speeds.Add(rb.linearVelocity.magnitude);
-            timer = 0f;
-        }
-
-        if (Input.GetKeyDown(KeyCode.F5))
-        {
-            SaveStatistics();
-            Debug.Log($"F5 got");
+            DatabaseManager.Instance.InsertTrajectoryPoint(attemptId, player.transform.position, levelTime);
+            timer = 0;
         }
     }
 
-    public void AddCollision()
+    void UpdateUI(float speed)
     {
-        collisions++;
-        if (collisionsText != null)
-            collisionsText.text = "Collisions: " + collisions;
+        if (speedText != null)
+            speedText.text = $"Speed: {speed:F2}";
+        if (collisionText != null)
+            collisionText.text = $"Collisions: {collisionCount}";
+        if (timeText != null)
+            timeText.text = $"Time: {levelTime:F1}";
     }
 
-    public void SaveStatistics(string fileName = "BallStats.csv")
+    public void RegisterCollision()
     {
-        if (trajectory.Count == 0)
-        {
-            Debug.LogWarning("Траектория пуста, нет данных для сохранения.");
-            return;
-        }
+        collisionCount++;
+    }
 
-        string filePath = Path.Combine(Application.persistentDataPath, fileName);
+    void OnLevelFinished()
+    {
+        SaveData("win");
+    }
 
-        try
-        {
-            using (StreamWriter writer = new StreamWriter(filePath))
-            {
-                writer.WriteLine("Time;X;Y;Z;Speed");
+    void OnLevelFailed()
+    {
+        SaveData("lose");
+    }
 
-                float time = 0f;
-                for (int i = 0; i < trajectory.Count; i++)
-                {
-                    Vector3 pos = trajectory[i];
-                    float speed = speeds[i];
-                    writer.WriteLine($"{time:F2};{pos.x:F3};{pos.y:F3};{pos.z:F3};{speed:F3}");
-                    time += recordInterval;
-                }
+    void SaveData(string result)
+    {
+        recording = false;
 
-                writer.WriteLine();
-                writer.WriteLine($"TotalDistance,{totalDistance:F3}");
-                writer.WriteLine($"TotalCollisions,{collisions}");
-            }
+        float avgSpeed = totalSpeed / Mathf.Max(speedSamples, 1);
 
-            Debug.Log($"Statistics saved successfully to: {filePath}");
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError("Ошибка при сохранении статистики: " + e.Message);
-        }
+        DatabaseManager.Instance.InsertStatistics(
+            sessionId,
+            distance,
+            avgSpeed,
+            maxSpeed,
+            collisionCount,
+            levelTime
+        );
+
+        // обновляем результат попытки
+        DatabaseManager.Instance.UpdateAttemptResult(attemptId, result, levelTime, collisionCount);
+
+        DatabaseManager.Instance.EndSession(sessionId);
+
+        Debug.Log("[STAT] Data saved for attempt " + attemptId);
     }
 }

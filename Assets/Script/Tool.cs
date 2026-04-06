@@ -1,5 +1,8 @@
 public enum Tool
 {
     Brush,
-    Line
+    Line,
+    Finish,
+    FakeFinish,
+    BallSpawn
 }
