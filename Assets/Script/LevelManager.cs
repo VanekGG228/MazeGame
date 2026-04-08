@@ -5,24 +5,28 @@ using System.IO;
 public class LevelManager : MonoBehaviour
 {
     [Header("Prefabs")]
-    public GameObject boardPrefab;
+    public GameObject squareBoardPrefab;
+    public GameObject circleBoardPrefab;
     public GameObject ballPrefab;
     public GameObject cubePrefab;
-    public GameObject finishPrefab;      // финиш
-    public GameObject deadZonePrefab;    // ловушка
+    public GameObject finishPrefab;
+    public GameObject deadZonePrefab;
 
     [Header("Plane")]
-    public Vector3 planeScale = new Vector3(5, 5, 5);
+    public Vector3 planeScale = new Vector3(3, 3, 3);
 
     [Header("Brush")]
     [Range(0.1f, 1)] public float colliderShrink = 0.8f;
-    [Header("Line")] public float cubeHeight = 0.5f;
+
+    [Header("Line")]
+    public float cubeHeight = 0.5f;
 
     private GameObject currentBoard;
     private GameObject currentBall;
     private Transform levelContent;
     private Vector2 boardSize;
     private Vector3? spawnPoint;
+    private int currentShape; // 0 = квадрат, 1 = круг
 
     void Start()
     {
@@ -32,9 +36,27 @@ public class LevelManager : MonoBehaviour
 
     public void CreateLevel(string levelFile)
     {
-        if (currentBoard != null) Destroy(currentBoard);
+        string path = Path.Combine(Application.persistentDataPath, levelFile);
+        if (!File.Exists(path))
+        {
+            Debug.LogError("Level file not found: " + path);
+            return;
+        }
 
-        currentBoard = Instantiate(boardPrefab);
+        string json = File.ReadAllText(path);
+        StrokeListWrapper wrapper = JsonUtility.FromJson<StrokeListWrapper>(json);
+
+        currentShape = wrapper.canvasShape;
+
+        GameObject selectedPrefab = currentShape == 1
+            ? circleBoardPrefab
+            : squareBoardPrefab;
+
+        if (currentBoard != null)
+            Destroy(currentBoard);
+
+        currentBoard = Instantiate(selectedPrefab);
+
         levelContent = currentBoard.transform.Find("LevelContent");
         if (levelContent == null)
         {
@@ -42,7 +64,7 @@ public class LevelManager : MonoBehaviour
             levelContent.parent = currentBoard.transform;
         }
 
-        LoadLevel(levelFile);
+        BuildLevel(wrapper);
         SpawnPlayer();
         ApplySpawn();
     }
@@ -65,24 +87,10 @@ public class LevelManager : MonoBehaviour
         EventManager.RaisePlayerSpawned(currentBall);
     }
 
-    void LoadLevel(string fileName)
-    {
-        ClearLevel();
-        string path = Path.Combine(Application.persistentDataPath, fileName);
-        if (!File.Exists(path)) { Debug.LogError("Level file not found: " + path); return; }
-
-        string json = File.ReadAllText(path);
-        StrokeListWrapper wrapper = JsonUtility.FromJson<StrokeListWrapper>(json);
-        BuildLevel(wrapper);
-    }
-
-    void ClearLevel()
-    {
-        foreach (Transform child in levelContent) Destroy(child.gameObject);
-    }
-
     void BuildLevel(StrokeListWrapper wrapper)
     {
+        ClearLevel();
+
         List<CombineInstance> brushMeshes = new();
         spawnPoint = null;
 
@@ -90,15 +98,36 @@ public class LevelManager : MonoBehaviour
         {
             switch (stroke.tool)
             {
-                case Tool.Brush: AddBrushStroke(stroke, brushMeshes); break;
-                case Tool.Line: BuildLineStroke(stroke); break;
-                case Tool.Finish: CreateTrigger(stroke.points[0], finishPrefab, "Finish"); break;
-                case Tool.FakeFinish: CreateTrigger(stroke.points[0], deadZonePrefab, "DeadZone"); break;
-                case Tool.BallSpawn: spawnPoint = ConvertToWorld(stroke.points[0]); break;
+                case Tool.Brush:
+                    AddBrushStroke(stroke, brushMeshes);
+                    break;
+
+                case Tool.Line:
+                    BuildLineStroke(stroke);
+                    break;
+
+                case Tool.Finish:
+                    CreateTrigger(stroke.points[0], finishPrefab, "Finish");
+                    break;
+
+                case Tool.FakeFinish:
+                    CreateTrigger(stroke.points[0], deadZonePrefab, "DeadZone");
+                    break;
+
+                case Tool.BallSpawn:
+                    spawnPoint = ConvertToWorld(stroke.points[0]);
+                    break;
             }
         }
 
-        if (brushMeshes.Count > 0) CreateCombinedMesh(brushMeshes);
+        if (brushMeshes.Count > 0)
+            CreateCombinedMesh(brushMeshes);
+    }
+
+    void ClearLevel()
+    {
+        foreach (Transform child in levelContent)
+            Destroy(child.gameObject);
     }
 
     void AddBrushStroke(DrawnStroke stroke, List<CombineInstance> combineList)
@@ -114,6 +143,10 @@ public class LevelManager : MonoBehaviour
 
             Vector3 pos = ConvertToWorld(point);
 
+            // 👉 ограничение круга
+            if (currentShape == 1 && !IsInsideCircle(pos))
+                continue;
+
             CombineInstance ci = new CombineInstance();
             ci.mesh = cubeMesh;
             ci.transform = Matrix4x4.TRS(pos, Quaternion.identity, cubeScale);
@@ -122,6 +155,7 @@ public class LevelManager : MonoBehaviour
             GameObject col = new GameObject("Collider");
             col.transform.parent = levelContent;
             col.transform.localPosition = pos;
+
             BoxCollider bc = col.AddComponent<BoxCollider>();
             bc.size = cubeScale * colliderShrink;
         }
@@ -131,10 +165,13 @@ public class LevelManager : MonoBehaviour
     {
         GameObject combined = new GameObject("CombinedBrushMesh");
         combined.transform.parent = levelContent;
+
         MeshFilter mf = combined.AddComponent<MeshFilter>();
         MeshRenderer mr = combined.AddComponent<MeshRenderer>();
+
         Mesh mesh = new Mesh();
         mesh.CombineMeshes(meshes.ToArray(), true, true);
+
         mf.mesh = mesh;
         mr.sharedMaterial = cubePrefab.GetComponent<MeshRenderer>().sharedMaterial;
     }
@@ -145,12 +182,17 @@ public class LevelManager : MonoBehaviour
 
         Vector3 start = ConvertToWorld(stroke.points[0]);
         Vector3 end = ConvertToWorld(stroke.points[1]);
+
+        if (currentShape == 1 && (!IsInsideCircle(start) || !IsInsideCircle(end)))
+            return;
+
         Vector3 center = (start + end) / 2;
         Vector3 dir = end - start;
         float length = dir.magnitude;
 
         GameObject cube = Instantiate(cubePrefab, center, Quaternion.identity, levelContent);
         cube.transform.rotation = Quaternion.LookRotation(dir);
+
         Vector3 scale = cube.transform.localScale;
         scale.z = length;
         scale.y = cubeHeight;
@@ -160,6 +202,10 @@ public class LevelManager : MonoBehaviour
     void CreateTrigger(Vector2 point, GameObject prefab, string tag)
     {
         Vector3 pos = ConvertToWorld(point);
+
+        if (currentShape == 1 && !IsInsideCircle(pos))
+            return;
+
         GameObject obj = Instantiate(prefab, pos, Quaternion.identity, levelContent);
         obj.tag = tag;
     }
@@ -169,5 +215,12 @@ public class LevelManager : MonoBehaviour
         float x = relative.x * boardSize.x;
         float z = relative.y * boardSize.y;
         return new Vector3(x, 0, z);
+    }
+
+    bool IsInsideCircle(Vector3 pos)
+    {
+        float radius = boardSize.x / 2f;
+        Vector2 p = new Vector2(pos.x, pos.z);
+        return p.magnitude <= radius;
     }
 }

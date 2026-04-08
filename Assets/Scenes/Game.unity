@@ -8377,7 +8377,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1578232136}
   - component: {fileID: 1578232135}
-  - component: {fileID: 1578232137}
   m_Layer: 0
   m_Name: LevelManager
   m_TagString: Untagged
@@ -8397,7 +8396,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac8e0d5806a77d24b9d03dac58b5f753, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  boardPrefab: {fileID: 3665128508388867773, guid: 26ea7754d910b8d43a7e7726c6a492cb, type: 3}
+  squareBoardPrefab: {fileID: 3665128508388867773, guid: 4a5a7c0ac95a1a14c875e4f6cb6f5477, type: 3}
+  circleBoardPrefab: {fileID: 3665128508388867773, guid: 26ea7754d910b8d43a7e7726c6a492cb, type: 3}
   ballPrefab: {fileID: 630138717737956262, guid: 5f98de2e1e2b5994ba993763dfb7b625, type: 3}
   cubePrefab: {fileID: 6191899960781759700, guid: 23a19d21581c2244980e1a1c60d6ebc1, type: 3}
   finishPrefab: {fileID: 7923218479788204221, guid: a6317fc362605284798eb2acc9b8c428, type: 3}
@@ -8420,22 +8420,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1578232137
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1578232134}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1b37c0a2e6e21de4f810302e6dabafd1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BoardTiltIMU
-  serial: {fileID: 1326295924}
-  maxTilt: 40
-  smooth: 6
-  alpha: 0.93
 --- !u!1 &1586806573
 GameObject:
   m_ObjectHideFlags: 0
@@ -12511,6 +12495,7 @@ PrefabInstance:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
+  - {fileID: 1326295925}
   - {fileID: 963194228}
   - {fileID: 1670935777}
   - {fileID: 792323103}
@@ -12521,4 +12506,3 @@ SceneRoots:
   - {fileID: 1047510012}
   - {fileID: 1837133982}
   - {fileID: 1901076856}
-  - {fileID: 1326295925}

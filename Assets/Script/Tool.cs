@@ -4,5 +4,8 @@ public enum Tool
     Line,
     Finish,
     FakeFinish,
-    BallSpawn
+    BallSpawn,
+
+    SetSquare,
+    SetCircle
 }

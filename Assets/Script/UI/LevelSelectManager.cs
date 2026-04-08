@@ -54,6 +54,6 @@ public class LevelSelectManager : MonoBehaviour
     public void StartLevel(string levelFile)
     {
         LevelData.SelectedLevelFile = levelFile;  
-        UnityEngine.SceneManagement.SceneManager.LoadScene("Game");
+        UnityEngine.SceneManagement.SceneManager.LoadScene("Calibration");
     }
 }

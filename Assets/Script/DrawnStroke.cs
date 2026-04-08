@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 [System.Serializable]
 public class DrawnStroke
@@ -12,5 +13,6 @@ public class DrawnStroke
 [System.Serializable]
 public class StrokeListWrapper
 {
-    public System.Collections.Generic.List<DrawnStroke> strokes;
+    public List<DrawnStroke> strokes;
+    public int canvasShape;
 }

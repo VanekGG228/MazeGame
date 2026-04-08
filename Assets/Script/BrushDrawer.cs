@@ -1,7 +1,8 @@
-using System.Collections.Generic;
+п»їusing System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
+
 
 public class BrushDrawerEditor : MonoBehaviour
 {
@@ -12,17 +13,22 @@ public class BrushDrawerEditor : MonoBehaviour
     public Color brushColor = Color.black;
     public int brushSize = 5;
 
+    [Header("Mask")]
+    public Image canvasImage; 
+    public Sprite squareSprite;
+    public Sprite circleSprite;
+
     [Header("Tool")]
     public Tool currentTool = Tool.Brush;
+
+    [Header("Canvas Shape")]
+    public int canvasShape = 0;
 
     private Texture2D texture;
     private Vector2? lastBrushPos = null;
     private Vector2? lineStartPos = null;
     private List<Vector2> currentStrokePoints = new List<Vector2>();
-
     public List<DrawnStroke> strokes = new List<DrawnStroke>();
-
-    // Последняя позиция шарика
     private Vector2? lastBallSpawn = null;
 
     void Start()
@@ -40,7 +46,6 @@ public class BrushDrawerEditor : MonoBehaviour
     private void OnMouseDown()
     {
         Vector2 mousePos = GetMouseRelativePosition();
-
         if (!IsInsideImage(mousePos)) return;
 
         if (currentTool == Tool.Brush)
@@ -81,18 +86,17 @@ public class BrushDrawerEditor : MonoBehaviour
         if (!IsInsideImage(mousePos)) return;
 
         if (currentTool == Tool.Brush)
-        {
             SaveCurrentBrushStroke();
-        }
         else if (currentTool == Tool.Line && lineStartPos != null)
-        {
             SaveLineStroke(mousePos);
-        }
     }
 
     private bool IsInsideImage(Vector2 relPos)
     {
-        return relPos.x >= -0.5f && relPos.x <= 0.5f && relPos.y >= -0.5f && relPos.y <= 0.5f;
+        if (canvasShape == 0)
+            return relPos.x >= -0.5f && relPos.x <= 0.5f && relPos.y >= -0.5f && relPos.y <= 0.5f;
+
+        return relPos.sqrMagnitude <= 0.25f;
     }
 
     private void SavePointObject(Vector2 pos, Tool tool)
@@ -102,7 +106,7 @@ public class BrushDrawerEditor : MonoBehaviour
             lastBallSpawn = pos;
             DrawPointObject(pos, tool);
         }
-        else // Finish и FakeFinish сохраняем все клики
+        else
         {
             strokes.Add(new DrawnStroke
             {
@@ -113,7 +117,6 @@ public class BrushDrawerEditor : MonoBehaviour
             });
             DrawPointObject(pos, tool);
         }
-
         texture.Apply();
     }
 
@@ -169,19 +172,14 @@ public class BrushDrawerEditor : MonoBehaviour
     private void DrawCircleCustom(Vector2 pos, Color color, int size)
     {
         int cx = (int)pos.x, cy = (int)pos.y;
-
         for (int x = -size; x <= size; x++)
-        {
             for (int y = -size; y <= size; y++)
-            {
                 if (x * x + y * y <= size * size)
                 {
                     int px = cx + x, py = cy + y;
                     if (px >= 0 && px < texture.width && py >= 0 && py < texture.height)
                         texture.SetPixel(px, py, color);
                 }
-            }
-        }
     }
 
     private void DrawLineCustom(Vector2 from, Vector2 to, Color color, int size)
@@ -236,7 +234,6 @@ public class BrushDrawerEditor : MonoBehaviour
     {
         strokes.Clear();
         lastBallSpawn = null;
-
         Color[] fillColor = new Color[texture.width * texture.height];
         for (int i = 0; i < fillColor.Length; i++) fillColor[i] = Color.white;
         texture.SetPixels(fillColor);
@@ -246,27 +243,18 @@ public class BrushDrawerEditor : MonoBehaviour
     public void RedrawAll()
     {
         ClearCanvasWithoutReset();
-
         foreach (var stroke in strokes)
         {
             if (stroke.tool == Tool.Brush)
-            {
                 for (int i = 1; i < stroke.points.Length; i++)
                     DrawLine(RelativeToTexture(stroke.points[i - 1]), RelativeToTexture(stroke.points[i]));
-            }
             else if (stroke.tool == Tool.Line)
-            {
                 DrawLine(RelativeToTexture(stroke.points[0]), RelativeToTexture(stroke.points[1]));
-            }
             else if (stroke.tool == Tool.Finish || stroke.tool == Tool.FakeFinish)
-            {
                 DrawPointObject(stroke.points[0], stroke.tool);
-            }
         }
-
         if (lastBallSpawn.HasValue)
             DrawPointObject(lastBallSpawn.Value, Tool.BallSpawn);
-
         texture.Apply();
     }
 
@@ -274,11 +262,9 @@ public class BrushDrawerEditor : MonoBehaviour
 
     public void SaveToDisk(string fileName)
     {
-        if (string.IsNullOrEmpty(fileName)) fileName = "drawing.json";
-
+        if (string.IsNullOrEmpty(fileName)) fileName = "drawing1.json";
         List<DrawnStroke> strokesToSave = new List<DrawnStroke>(strokes);
 
-        // Сохраняем шарик отдельно
         if (lastBallSpawn.HasValue)
         {
             strokesToSave.Add(new DrawnStroke
@@ -290,21 +276,24 @@ public class BrushDrawerEditor : MonoBehaviour
             });
         }
 
-        StrokeListWrapper wrapper = new StrokeListWrapper { strokes = strokesToSave };
+        StrokeListWrapper wrapper = new StrokeListWrapper
+        {
+            strokes = strokesToSave,
+            canvasShape = canvasShape
+        };
         string json = JsonUtility.ToJson(wrapper, true);
         string path = Path.Combine(Application.persistentDataPath, fileName);
         File.WriteAllText(path, json);
-        Debug.Log("Сохранено: " + path);
+        Debug.Log("Saved: " + path);
     }
 
     public void LoadFromDisk(string fileName)
     {
         if (string.IsNullOrEmpty(fileName)) fileName = "drawing.json";
-
         string path = Path.Combine(Application.persistentDataPath, fileName);
         if (!File.Exists(path))
         {
-            Debug.LogError("Файл не найден: " + path);
+            Debug.LogError("File not found: " + path);
             return;
         }
 
@@ -313,6 +302,7 @@ public class BrushDrawerEditor : MonoBehaviour
 
         strokes = new List<DrawnStroke>();
         lastBallSpawn = null;
+        canvasShape = wrapper.canvasShape;
 
         foreach (var s in wrapper.strokes)
         {
@@ -321,9 +311,8 @@ public class BrushDrawerEditor : MonoBehaviour
             else
                 strokes.Add(s);
         }
-
         RedrawAll();
-        Debug.Log("Загружено: " + path);
+        Debug.Log("Loaded: " + path);
     }
 
     // ===================== UI Tool Set =====================
@@ -332,4 +321,18 @@ public class BrushDrawerEditor : MonoBehaviour
     public void SetToolFinish() => currentTool = Tool.Finish;
     public void SetToolFakeFinish() => currentTool = Tool.FakeFinish;
     public void SetToolBallSpawn() => currentTool = Tool.BallSpawn;
+
+
+
+    public void SetCanvasSquare()
+    {
+        canvasShape = 0;
+        canvasImage.sprite = squareSprite;
+    }
+
+    public void SetCanvasCircle()
+    {
+        canvasShape = 1;
+        canvasImage.sprite = circleSprite;
+    }
 }
