@@ -578,7 +578,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
-  m_IgnoreReversedGraphics: 0
+  m_IgnoreReversedGraphics: 1
   m_BlockingObjects: 0
   m_BlockingMask:
     serializedVersion: 2
@@ -1365,7 +1365,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 703, y: -410}
+  m_AnchoredPosition: {x: 500, y: -400}
   m_SizeDelta: {x: 130, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &259212396
@@ -3261,11 +3261,10 @@ MonoBehaviour:
   scrollView: {fileID: 1090695788}
   graphArea: {fileID: 9217203}
   lineColor: {r: 0.07919741, g: 0, b: 1, a: 1}
-  levelColor: {r: 0.009433985, g: 0.009211485, b: 0.009211485, a: 1}
+  lineThickness: 3
   mapWidth: 51
   mapHeight: 51
-  lineThickness: 3
-  attemptId: 97
+  attemptId: 19
 --- !u!1 &1266740513
 GameObject:
   m_ObjectHideFlags: 0
@@ -3726,7 +3725,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -464, y: 197}
+  m_AnchoredPosition: {x: -588, y: 199}
   m_SizeDelta: {x: 900, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1717144740
@@ -3785,7 +3784,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 17
-  m_HorizontalAlignment: 1
+  m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0

@@ -1,41 +1,105 @@
-//using System.Collections.Generic;
-//using System.IO;
-//using UnityEngine;
-//using UnityEngine.UI;
+Ôªøusing System.IO;
+using UnityEngine;
 
-//public class BrushDrawerEditor : BrushDrawer
-//{
-//    [Header("UI")]
-//    public TMP_InputField inputFileName;
+public static class SaveLoadService
+{
+    public static void Save(StrokeRepository repo, int canvasShape)
+    {
+        if (DatabaseManager.Instance == null)
+        {
+            Debug.LogError("DatabaseManager not found!");
+            return;
+        }
 
-//    public void LoadFromDisk()
-//    {
-//        string fileName = inputFileName.text;
-//        if (string.IsNullOrEmpty(fileName)) fileName = "drawing.json";
+        // 1. —Å–æ–∑–¥–∞—ë–º –∑–∞–ø–∏—Å—å –∏ –ø–æ–ª—É—á–∞–µ–º ID
+        int levelId = DatabaseManager.Instance.InsertLevel(
+            "New Level",
+            "Custom",
+            "" // –ø–æ–∫–∞ –±–µ–∑ –ø—É—Ç–∏
+        );
 
-//        string path = Path.Combine(Application.persistentDataPath, fileName);
-//        if (!File.Exists(path))
-//        {
-//            Debug.LogError("‘‡ÈÎ ÌÂ Ì‡È‰ÂÌ: " + path);
-//            return;
-//        }
+        string fileName = levelId + ".json";
 
-//        string json = File.ReadAllText(path);
-//        StrokeListWrapper wrapper = JsonUtility.FromJson<StrokeListWrapper>(json);
-//        strokes = wrapper.strokes;
-//        RedrawAll();
-//        Debug.Log("«‡„ÛÊÂÌÓ: " + path);
-//    }
+        string folderPath;
 
-//    public void SaveToDisk()
-//    {
-//        string fileName = inputFileName.text;
-//        if (string.IsNullOrEmpty(fileName)) fileName = "drawing.json";
+#if UNITY_EDITOR
+        folderPath = Path.Combine(Application.dataPath, "StreamingAssets/Levels");
+#else
+        folderPath = Path.Combine(Application.persistentDataPath, "Levels");
+#endif
 
-//        StrokeListWrapper wrapper = new StrokeListWrapper { strokes = strokes };
-//        string json = JsonUtility.ToJson(wrapper, true);
-//        string path = Path.Combine(Application.persistentDataPath, fileName);
-//        File.WriteAllText(path, json);
-//        Debug.Log("—Óı‡ÌÂÌÓ: " + path);
-//    }
-//}
+        if (!Directory.Exists(folderPath))
+            Directory.CreateDirectory(folderPath);
+
+        string fullPath = Path.Combine(folderPath, fileName);
+
+
+        StrokeListWrapper wrapper = new StrokeListWrapper
+        {
+            strokes = repo.strokes,
+            canvasShape = canvasShape
+        };
+
+        string json = JsonUtility.ToJson(wrapper, true);
+        File.WriteAllText(fullPath, json);
+
+        Debug.Log("Saved: " + fullPath);
+
+        string relativePath = "Levels/" + fileName;
+
+        DatabaseManager.Instance.UpdateLevelPath(levelId, relativePath);
+
+        Debug.Log("Level saved with ID: " + levelId);
+    }
+
+    public static StrokeListWrapper Load(int levelId)
+    {
+        Debug.Log($"[Load] Start loading level with ID: {levelId}");
+
+        string fileName = levelId + ".json";
+        Debug.Log($"[Load] File name: {fileName}");
+
+        string path;
+
+#if UNITY_EDITOR
+    path = Path.Combine(Application.dataPath, "StreamingAssets/Levels", fileName);
+    Debug.Log("[Load] Using EDITOR path");
+#else
+        path = Path.Combine(Application.persistentDataPath, "Levels", fileName);
+        Debug.Log("[Load] Using BUILD path");
+#endif
+
+        Debug.Log($"[Load] Full path: {path}");
+
+        if (!File.Exists(path))
+        {
+            Debug.LogError($"[Load] ‚ùå File not found at: {path}");
+            return null;
+        }
+
+        Debug.Log("[Load] File exists, reading...");
+
+        string json = File.ReadAllText(path);
+
+        if (string.IsNullOrEmpty(json))
+        {
+            Debug.LogError("[Load] ‚ùå JSON is empty!");
+            return null;
+        }
+
+        Debug.Log($"[Load] JSON length: {json.Length}");
+
+        StrokeListWrapper data = JsonUtility.FromJson<StrokeListWrapper>(json);
+
+        if (data == null)
+        {
+            Debug.LogError("[Load] ‚ùå Failed to parse JSON!");
+            return null;
+        }
+
+        Debug.Log($"[Load] ‚úÖ Successfully loaded level {levelId}");
+        Debug.Log($"[Load] Strokes count: {data.strokes?.Count}");
+
+        return data;
+    }
+}

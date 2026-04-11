@@ -30,53 +30,58 @@ public class DatabaseManager : MonoBehaviour
         using var cmd = connection.CreateCommand();
 
         cmd.CommandText = @"
-        CREATE TABLE IF NOT EXISTS Users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT,
-            age INTEGER,
-            createdAt TEXT
-        );
+            CREATE TABLE IF NOT EXISTS Users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
+                age INTEGER,
+                createdAt TEXT
+            );
 
-        CREATE TABLE IF NOT EXISTS Sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            userId INTEGER,
-            levelId INTEGER,
-            startTime TEXT,
-            endTime TEXT
-        );
+            CREATE TABLE IF NOT EXISTS Levels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                difficulty TEXT,
+                path TEXT
+            );
 
-        CREATE TABLE IF NOT EXISTS Attempts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sessionId INTEGER,
-            result TEXT,
-            completionTime REAL,
-            errorsCount INTEGER
-        );
+            CREATE TABLE IF NOT EXISTS Sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                userId INTEGER,
+                levelId INTEGER,
+                startTime TEXT,
+                endTime TEXT
+            );
 
-        CREATE TABLE IF NOT EXISTS TrajectoryPoints (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            attemptId INTEGER,
-            posX REAL,
-            posY REAL,
-            posZ REAL,
-            time REAL
-        );
+            CREATE TABLE IF NOT EXISTS Attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sessionId INTEGER,
+                result TEXT,
+                completionTime REAL,
+                errorsCount INTEGER
+            );
 
-        CREATE TABLE IF NOT EXISTS Statistics (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            attemptId INTEGER,
-            distance REAL,
-            avgSpeed REAL,
-            maxSpeed REAL,
-            collisions INTEGER,
-            duration REAL
-        );
-        ";
+            CREATE TABLE IF NOT EXISTS TrajectoryPoints (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                attemptId INTEGER,
+                posX REAL,
+                posY REAL,
+                posZ REAL,
+                time REAL
+            );
+
+            CREATE TABLE IF NOT EXISTS Statistics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                attemptId INTEGER,
+                distance REAL,
+                avgSpeed REAL,
+                maxSpeed REAL,
+                collisions INTEGER,
+                duration REAL
+            );";
         cmd.ExecuteNonQuery();
         Debug.Log("[DB] Tables ensured");
     }
 
-    // Создание и завершение сессий
     public int CreateSession(int userId, int levelId)
     {
         using var connection = new SqliteConnection(dbPath);
@@ -102,7 +107,6 @@ public class DatabaseManager : MonoBehaviour
         cmd.ExecuteNonQuery();
     }
 
-    // Работа с попытками
     public int InsertAttempt(int sessionId, string result, float completionTime, int errors)
     {
         using var connection = new SqliteConnection(dbPath);
@@ -120,7 +124,24 @@ public class DatabaseManager : MonoBehaviour
         return Convert.ToInt32(cmd.ExecuteScalar());
     }
 
-    // Траектория привязана к попытке
+    public void UpdateLevelPath(int levelId, string path)
+    {
+        using var connection = new SqliteConnection(dbPath);
+        connection.Open();
+        using var cmd = connection.CreateCommand();
+
+        cmd.CommandText = @"
+        UPDATE Levels
+        SET path = @path
+        WHERE id = @id;
+    ";
+
+        cmd.Parameters.AddWithValue("@path", path);
+        cmd.Parameters.AddWithValue("@id", levelId);
+
+        cmd.ExecuteNonQuery();
+    }
+
     public void InsertTrajectoryPoint(int attemptId, Vector3 pos, float time)
     {
         using var connection = new SqliteConnection(dbPath);
@@ -136,6 +157,33 @@ public class DatabaseManager : MonoBehaviour
         cmd.Parameters.AddWithValue("@z", pos.z);
         cmd.Parameters.AddWithValue("@time", time);
         cmd.ExecuteNonQuery();
+    }
+
+
+    public List<LevelDataRow> GetAllLevels()
+    {
+        List<LevelDataRow> levels = new List<LevelDataRow>();
+
+        using var connection = new SqliteConnection(dbPath);
+        connection.Open();
+        using var cmd = connection.CreateCommand();
+
+        cmd.CommandText = "SELECT id, name, difficulty, path FROM Levels ORDER BY id DESC;";
+
+        using var reader = cmd.ExecuteReader();
+
+        while (reader.Read())
+        {
+            levels.Add(new LevelDataRow
+            {
+                id = reader.GetInt32(0),
+                name = reader.GetString(1),
+                difficulty = reader.GetString(2),
+                path = reader.GetString(3)
+            });
+        }
+
+        return levels;
     }
 
     public List<Vector3> GetTrajectoryForAttempt(int attemptId)
@@ -162,7 +210,6 @@ public class DatabaseManager : MonoBehaviour
         return points;
     }
 
-    // Статистика по попытке
     public void InsertStatistics(int attemptId, float distance, float avgSpeed, float maxSpeed, int collisions, float duration)
     {
         using var connection = new SqliteConnection(dbPath);
@@ -222,11 +269,11 @@ public class DatabaseManager : MonoBehaviour
         using var cmd = connection.CreateCommand();
 
         cmd.CommandText = @"
-        SELECT DISTINCT a.id, a.result, a.completionTime, a.errorsCount
-        FROM Attempts a
-        INNER JOIN TrajectoryPoints t ON a.id = t.attemptId
-        ORDER BY a.id DESC;
-    ";
+            SELECT DISTINCT a.id, a.result, a.completionTime, a.errorsCount
+            FROM Attempts a
+            INNER JOIN Statistics s ON a.id = s.attemptId
+            ORDER BY a.id DESC;
+        ";
 
         using var reader = cmd.ExecuteReader();
 
@@ -242,5 +289,105 @@ public class DatabaseManager : MonoBehaviour
         }
 
         return attempts;
+    }
+
+    public StatisticsData GetStatisticsForAttempt(int attemptId)
+    {
+        using var connection = new SqliteConnection(dbPath);
+        connection.Open();
+
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+        SELECT distance, avgSpeed, maxSpeed, collisions, duration
+        FROM Statistics
+        WHERE attemptId = @attemptId
+        LIMIT 1;
+    ";
+
+        cmd.Parameters.AddWithValue("@attemptId", attemptId);
+
+        using var reader = cmd.ExecuteReader();
+        if (reader.Read())
+        {
+            return new StatisticsData
+            {
+                distance = reader.GetFloat(0),
+                avgSpeed = reader.GetFloat(1),
+                maxSpeed = reader.GetFloat(2),
+                collisions = reader.GetInt32(3),
+                duration = reader.GetFloat(4)
+            };
+        }
+
+        return null;
+    }
+
+    public int InsertLevel(string name, string difficulty, string path)
+    {
+        using var connection = new SqliteConnection(dbPath);
+        connection.Open();
+        using var cmd = connection.CreateCommand();
+
+        cmd.CommandText = @"
+        INSERT INTO Levels (name, difficulty, path)
+        VALUES (@name, @difficulty, @path);
+        SELECT last_insert_rowid();
+    ";
+
+        cmd.Parameters.AddWithValue("@name", name);
+        cmd.Parameters.AddWithValue("@difficulty", difficulty);
+        cmd.Parameters.AddWithValue("@path", path);
+
+        return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
+
+    public int GetSessionLevelIdFromAttempt(int attemptId)
+    {
+        using var connection = new SqliteConnection(dbPath);
+        connection.Open();
+
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+        SELECT s.levelId
+        FROM Sessions s
+        JOIN Attempts a ON a.sessionId = s.id
+        WHERE a.id = @id;
+    ";
+
+        cmd.Parameters.AddWithValue("@id", attemptId);
+
+        var result = cmd.ExecuteScalar();
+        return result != null ? Convert.ToInt32(result) : -1;
+    }
+
+    public LevelDataRow GetLevelById(int levelId)
+    {
+        using var connection = new SqliteConnection(dbPath);
+        connection.Open();
+
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+        SELECT id, name, difficulty, path
+        FROM Levels
+        WHERE id = @id;
+    ";
+
+        cmd.Parameters.AddWithValue("@id", levelId);
+
+        using var reader = cmd.ExecuteReader();
+
+        if (reader.Read())
+        {
+            return new LevelDataRow
+            {
+                id = reader.GetInt32(0),
+                name = reader.GetString(1),
+                difficulty = reader.GetString(2),
+                path = reader.GetString(3)
+            };
+        }
+
+        return null;
     }
 }

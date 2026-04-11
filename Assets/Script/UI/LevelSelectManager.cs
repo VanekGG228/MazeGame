@@ -1,7 +1,7 @@
-using System.IO;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
 
 public class LevelSelectManager : MonoBehaviour
 {
@@ -15,45 +15,44 @@ public class LevelSelectManager : MonoBehaviour
 
     void LoadLevels()
     {
-        string path = Application.streamingAssetsPath + "/Levels";
-
-        if (!Directory.Exists(path))
+        if (DatabaseManager.Instance == null)
         {
-            Debug.LogError("Levels folder not found: " + path);
+            Debug.LogError("DatabaseManager not found!");
             return;
         }
 
-        string[] files = Directory.GetFiles(path, "*.json");
+        List<LevelDataRow> levels = DatabaseManager.Instance.GetAllLevels();
 
-        Debug.Log(files.Length);
-        
-        foreach (string file in files)
+        Debug.Log("[LevelSelect] Levels count: " + levels.Count);
+
+        foreach (var level in levels)
         {
-            CreateButton(file);
-            Debug.Log(file);
+            CreateButton(level);
         }
     }
 
-    void CreateButton(string levelPath)
+    void CreateButton(LevelDataRow level)
     {
         GameObject button = Instantiate(levelButtonPrefab, content);
-
         button.transform.localScale = Vector3.one;
 
-        string levelName = Path.GetFileNameWithoutExtension(levelPath);
         TMP_Text text = button.GetComponentInChildren<TMP_Text>();
         if (text != null)
-            text.text = levelName;
+            text.text = $"{level.id}";
 
-    
         button.GetComponent<Button>().onClick.AddListener(() =>
         {
-            StartLevel(levelPath);
+            StartLevel(level);
         });
     }
-    public void StartLevel(string levelFile)
+
+    public void StartLevel(LevelDataRow level)
     {
-        LevelData.SelectedLevelFile = levelFile;  
+        LevelData.SelectedLevelId = level.id;
+        LevelData.SelectedLevelPath = level.path;
+
+        Debug.Log($"[LevelSelect] Loading level ID: {level.id}, path: {level.path}");
+
         UnityEngine.SceneManagement.SceneManager.LoadScene("Calibration");
     }
 }

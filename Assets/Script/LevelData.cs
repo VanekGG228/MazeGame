@@ -1,4 +1,5 @@
 public static class LevelData
 {
-    public static string SelectedLevelFile = "drawing.json";
+    public static int SelectedLevelId;
+    public static string SelectedLevelPath;
 }

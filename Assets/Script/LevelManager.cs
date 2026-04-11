@@ -31,12 +31,23 @@ public class LevelManager : MonoBehaviour
     void Start()
     {
         boardSize = new Vector2(10f * planeScale.x, 10f * planeScale.z);
-        CreateLevel(LevelData.SelectedLevelFile);
+        CreateLevel(LevelData.SelectedLevelPath);
     }
 
     public void CreateLevel(string levelFile)
     {
-        string path = Path.Combine(Application.persistentDataPath, levelFile);
+
+        string path;
+#if UNITY_EDITOR
+    path = Path.Combine(Application.streamingAssetsPath, levelFile);
+    Debug.Log("[LevelManager] EDITOR path used");
+#else
+        path = Path.Combine(Application.persistentDataPath, levelFile);
+        Debug.Log("[LevelManager] BUILD path used");
+#endif
+
+        Debug.Log("[LevelManager] Requested file: " + levelFile);
+        Debug.Log("[LevelManager] Full path: " + path);
         if (!File.Exists(path))
         {
             Debug.LogError("Level file not found: " + path);
