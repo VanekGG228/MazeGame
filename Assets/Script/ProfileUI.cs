@@ -17,8 +17,8 @@ public class ProfileUI : MonoBehaviour
     public Color levelColor = Color.gray;
 
     [Header("Map Settings")]
-    public float mapWidth = 51f;
-    public float mapHeight = 51f;
+    public float mapWidth = 41f;
+    public float mapHeight = 41f;
     public int lineThickness = 3;
 
     [Header("Attempt")]
@@ -39,19 +39,18 @@ public class ProfileUI : MonoBehaviour
 
         levelData = DatabaseManager.Instance.GetLevelById(levelId);
 
-        List<Vector3> trajectory = DatabaseManager.Instance.GetTrajectoryForAttempt(attemptId);
-        if (trajectory.Count < 2) return;
+        List<Vector2> trajectory = DatabaseManager.Instance.GetTrajectoryForAttempt(attemptId);
+        if (trajectory == null || trajectory.Count < 2) return;
 
         DrawAll(trajectory);
 
         var stats = DatabaseManager.Instance.GetStatisticsForAttempt(attemptId);
 
-        // 🔥 Формируем текст
         statsText.text =
             $"Attempt: {attemptId}\n" +
             $"Level ID: {levelId}\n" +
             $"Difficulty: {levelData?.difficulty}\n" +
-            $"Points: {trajectory.Count}\n\n" ;
+            $"Points: {trajectory.Count}\n\n";
 
         if (stats != null)
         {
@@ -77,7 +76,7 @@ public class ProfileUI : MonoBehaviour
         return $"{min:00}:{sec:00}";
     }
 
-    void DrawAll(List<Vector3> trajectory)
+    void DrawAll(List<Vector2> trajectory)
     {
         int width = (int)trajectoryImage.rectTransform.rect.width;
         int height = (int)trajectoryImage.rectTransform.rect.height;
@@ -131,13 +130,13 @@ public class ProfileUI : MonoBehaviour
         }
     }
 
-    void DrawLineWorld(Texture2D tex, Vector3 a, Vector3 b, Color col)
+    void DrawLineWorld(Texture2D tex, Vector2 a, Vector2 b, Color col)
     {
         float ax = ((a.x + mapWidth / 2f) / mapWidth) * tex.width;
-        float ay = ((a.z + mapHeight / 2f) / mapHeight) * tex.height;
+        float ay = ((a.y + mapHeight / 2f) / mapHeight) * tex.height;
 
         float bx = ((b.x + mapWidth / 2f) / mapWidth) * tex.width;
-        float by = ((b.z + mapHeight / 2f) / mapHeight) * tex.height;
+        float by = ((b.y + mapHeight / 2f) / mapHeight) * tex.height;
 
         DrawLine(tex, (int)ax, (int)ay, (int)bx, (int)by, col);
     }

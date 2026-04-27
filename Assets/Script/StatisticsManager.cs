@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
 using TMPro;
 
 public class StatisticsManager : MonoBehaviour
@@ -9,8 +8,8 @@ public class StatisticsManager : MonoBehaviour
     private GameObject player;
     private Rigidbody rb;
 
-    private float timer;
     private float levelTime;
+    private float recordTimer;
 
     private int collisionCount = 0;
 
@@ -25,7 +24,7 @@ public class StatisticsManager : MonoBehaviour
     private int attemptId = -1;
 
     [Header("Settings")]
-    public float recordInterval = 1f;
+    public float recordInterval = 0.1f;
 
     [Header("UI")]
     public TMP_Text speedText;
@@ -37,13 +36,10 @@ public class StatisticsManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        Debug.Log("[STAT] Awake OK");
     }
 
     void OnEnable()
     {
-        Debug.Log("[STAT] Subscribing events");
-
         EventManager.OnPlayerSpawned += OnPlayerSpawned;
         EventManager.OnLevelFinished += OnLevelFinished;
         EventManager.OnLevelFailed += OnLevelFailed;
@@ -51,8 +47,6 @@ public class StatisticsManager : MonoBehaviour
 
     void OnDisable()
     {
-        Debug.Log("[STAT] Unsubscribing events");
-
         EventManager.OnPlayerSpawned -= OnPlayerSpawned;
         EventManager.OnLevelFinished -= OnLevelFinished;
         EventManager.OnLevelFailed -= OnLevelFailed;
@@ -60,68 +54,36 @@ public class StatisticsManager : MonoBehaviour
 
     void OnPlayerSpawned(GameObject newPlayer)
     {
-        Debug.Log("[STAT] OnPlayerSpawned CALLED");
-
         player = newPlayer;
         rb = player.GetComponent<Rigidbody>();
 
-        timer = 0;
-        levelTime = 0;
+        levelTime = 0f;
+        recordTimer = 0f;
+
         collisionCount = 0;
-        totalSpeed = 0;
+        totalSpeed = 0f;
         speedSamples = 0;
-        maxSpeed = 0;
-        distance = 0;
-        lastPosition = player.transform.position;
+        maxSpeed = 0f;
+        distance = 0f;
 
-        Debug.Log("[STAT] Reset stats done");
+        lastPosition = rb.position;
 
-        try
-        {
-            Debug.Log("[STAT] Creating session...");
+        int levelId = LevelData.SelectedLevelId;
+        if (levelId <= 0) return;
 
-            int levelId = LevelData.SelectedLevelId;
+        sessionId = DatabaseManager.Instance.CreateSession(1, levelId);
+        DatabaseManager.Instance.InsertAttempt(sessionId, "ongoing", 0, 0);
 
-            if (levelId <= 0)
-            {
-                Debug.LogError("[STAT] Invalid levelId!");
-                return; // FIX: was yield break
-            }
+        attemptId = DatabaseManager.Instance.GetLastAttemptId(sessionId);
 
-            Debug.Log("[STAT] Creating session for level: " + levelId);
-
-            sessionId = DatabaseManager.Instance.CreateSession(1, levelId);
-
-            Debug.Log("[STAT] Session created: " + sessionId);
-
-            Debug.Log("[STAT] Inserting attempt...");
-
-            DatabaseManager.Instance.InsertAttempt(sessionId, "ongoing", 0, 0);
-
-            Debug.Log("[STAT] Attempt inserted");
-
-            attemptId = DatabaseManager.Instance.GetLastAttemptId(sessionId);
-
-            Debug.Log("[STAT] Attempt ID: " + attemptId);
-
-            if (attemptId < 0)
-                Debug.LogError("[STAT] INVALID attemptId!");
-
-            recording = true;
-            Debug.Log("[STAT] Recording STARTED");
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError("[STAT] DB ERROR: " + e.Message);
-        }
+        recording = true;
     }
 
-    void Update()
+    void FixedUpdate()
     {
         if (!recording || player == null) return;
 
-        levelTime += Time.deltaTime;
-        timer += Time.deltaTime;
+        levelTime += Time.fixedDeltaTime;
 
         float speed = rb.linearVelocity.magnitude;
 
@@ -131,17 +93,23 @@ public class StatisticsManager : MonoBehaviour
         if (speed > maxSpeed)
             maxSpeed = speed;
 
-        distance += Vector3.Distance(lastPosition, player.transform.position);
-        lastPosition = player.transform.position;
+ 
+        distance += Vector3.Distance(lastPosition, rb.position);
+        lastPosition = rb.position;
 
         UpdateUI(speed);
 
-        if (timer >= recordInterval)
-        {
-            Debug.Log("[STAT] Saving trajectory point at t=" + levelTime);
+        recordTimer += Time.fixedDeltaTime;
 
-            DatabaseManager.Instance.InsertTrajectoryPoint(attemptId, player.transform.position, levelTime);
-            timer = 0;
+        if (recordTimer >= recordInterval)
+        {
+            DatabaseManager.Instance.InsertTrajectoryPoint(
+                attemptId,
+                rb.position,
+                levelTime
+            );
+
+            recordTimer = 0f;
         }
     }
 
@@ -149,8 +117,10 @@ public class StatisticsManager : MonoBehaviour
     {
         if (speedText != null)
             speedText.text = $"Speed: {speed:F2}";
+
         if (collisionText != null)
             collisionText.text = $"Collisions: {collisionCount}";
+
         if (timeText != null)
             timeText.text = $"Time: {levelTime:F1}";
     }
@@ -158,31 +128,26 @@ public class StatisticsManager : MonoBehaviour
     public void RegisterCollision()
     {
         collisionCount++;
-        Debug.Log("[STAT] Collision: " + collisionCount);
     }
 
     void OnLevelFinished()
     {
-        Debug.Log("[STAT] LEVEL FINISHED");
         SaveData("win");
     }
 
     void OnLevelFailed()
     {
-        Debug.Log("[STAT] LEVEL FAILED");
         SaveData("lose");
     }
 
     void SaveData(string result)
     {
-        Debug.Log("[STAT] Saving data... result = " + result);
-
         recording = false;
 
         float avgSpeed = totalSpeed / Mathf.Max(speedSamples, 1);
 
         DatabaseManager.Instance.InsertStatistics(
-            sessionId,
+            attemptId,
             distance,
             avgSpeed,
             maxSpeed,
@@ -190,10 +155,21 @@ public class StatisticsManager : MonoBehaviour
             levelTime
         );
 
-        DatabaseManager.Instance.UpdateAttemptResult(attemptId, result, levelTime, collisionCount);
+        DatabaseManager.Instance.UpdateAttemptResult(
+            attemptId,
+            result,
+            levelTime,
+            collisionCount
+        );
 
         DatabaseManager.Instance.EndSession(sessionId);
+    }
 
-        Debug.Log("[STAT] Data saved for attempt " + attemptId);
+    public void ForceExit()
+    {
+        if (!recording) return;
+
+        SaveData("exit");
+        recording = false;
     }
 }

@@ -11,6 +11,7 @@ public class LevelManager : MonoBehaviour
     public GameObject cubePrefab;
     public GameObject finishPrefab;
     public GameObject deadZonePrefab;
+    public Camera cameraLook;
 
     [Header("Plane")]
     public Vector3 planeScale = new Vector3(3, 3, 3);
@@ -20,6 +21,7 @@ public class LevelManager : MonoBehaviour
 
     [Header("Line")]
     public float cubeHeight = 0.5f;
+    
 
     private GameObject currentBoard;
     private GameObject currentBall;
@@ -78,7 +80,33 @@ public class LevelManager : MonoBehaviour
         BuildLevel(wrapper);
         SpawnPlayer();
         ApplySpawn();
+
+        //SetupCamera();
     }
+
+    //void SetupCamera()
+    //{
+    //    if (cameraLook == null || currentBoard == null)
+    //    {
+    //        Debug.Log("Camera or Board is NULL");
+    //        return;
+    //    }
+
+    //    Transform centerPoint = currentBoard.transform.Find("Center");
+
+    //    if (centerPoint == null)
+    //        centerPoint = currentBoard.transform;
+
+    //    Vector3 center = centerPoint.position;
+
+    //    cameraLook.transform.LookAt(center);
+    //    Debug.DrawLine(cameraLook.transform.position, center, Color.red, 5f);
+    //    Debug.DrawRay(cameraLook.transform.position, cameraLook.transform.forward * 5f, Color.blue, 5f);
+
+    //    Debug.Log($"CENTER: {center}");
+    //    Debug.Log($"CAM POS: {cameraLook.transform.position}");
+    //    Debug.Log($"DIST: {Vector3.Distance(cameraLook.transform.position, center)}");
+    //}
 
     void SpawnPlayer()
     {

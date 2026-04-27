@@ -26,7 +26,7 @@ public class SerialReader : MonoBehaviour
             running = true;
 
             readThread = new Thread(ReadLoop);
-            readThread.IsBackground = true; // важно!
+            readThread.IsBackground = true; 
             readThread.Start();
 
             Debug.Log($"[Serial] Port {portName} opened at {baudRate} baud.");
@@ -100,8 +100,8 @@ public class SerialReader : MonoBehaviour
                     return;
                 }
             }
-            Debug.Log("values: " + string.Join(", ", values));
-            Debug.Log("imu: " + string.Join(", ", imu));
+
+            //Debug.Log("imu: " + string.Join(", ", imu));
             lock (lockObj)
             {
                 for (int i = 0; i < 12; i++)
@@ -121,6 +121,21 @@ public class SerialReader : MonoBehaviour
         {
             return (float[])imu.Clone();
         }
+    }
+
+    public void StopSerial()
+    {
+        running = false;
+
+        if (port != null && port.IsOpen)
+            port.Close();
+
+        if (readThread != null && readThread.IsAlive)
+        {
+            readThread.Join(200); 
+        }
+
+        Debug.Log("[Serial] Stopped safely");
     }
 
     void OnDestroy()

@@ -20,5 +20,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Calibration.unity
     guid: fb838fdd012c6e04b8d2e09a95d41359
-  m_configObjects: {}
+  m_configObjects:
+    com.unity.addressableassets: {fileID: 11400000, guid: 648b0de75f5658943b92e4e9647e7ca4, type: 2}
+    com.unity.localization.settings: {fileID: 11400000, guid: 679c2a5894ad4824eb5e533b0d0738e2, type: 2}
   m_UseUCBPForAssetBundles: 0

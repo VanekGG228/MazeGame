@@ -22,7 +22,6 @@ public class BrushDrawer : MonoBehaviour
 
     private IDrawTool currentTool;
 
-    // 0 = square, 1 = circle
     private int canvasShape = 0;
 
     void Start()
@@ -33,7 +32,7 @@ public class BrushDrawer : MonoBehaviour
         ClearCanvas();
         rawImage.texture = texture;
 
-        SetCanvasSquare(); // дефолт
+        SetCanvasSquare(); 
         SetBrushTool();
     }
 
@@ -55,7 +54,6 @@ public class BrushDrawer : MonoBehaviour
         if (Input.GetMouseButtonUp(0)) currentTool?.OnUp(GetMousePos());
     }
 
-    // ================= POSITION =================
 
     Vector2 GetMousePos()
     {
@@ -77,16 +75,15 @@ public class BrushDrawer : MonoBehaviour
         return new Vector2((rel.x + 0.5f) * texture.width, (rel.y + 0.5f) * texture.height);
     }
 
-    // ================= CANVAS SHAPE =================
 
     public bool IsInsideCanvas(Vector2 relPos)
     {
-        if (canvasShape == 0) // square
+        if (canvasShape == 0)
         {
             return relPos.x >= -0.5f && relPos.x <= 0.5f &&
                    relPos.y >= -0.5f && relPos.y <= 0.5f;
         }
-        else // circle
+        else 
         {
             return relPos.sqrMagnitude <= 0.25f;
         }
@@ -103,8 +100,6 @@ public class BrushDrawer : MonoBehaviour
         canvasShape = 1;
         if (canvasImage != null) canvasImage.sprite = circleSprite;
     }
-
-    // ================= CANVAS =================
 
     public void ClearCanvas()
     {
@@ -155,33 +150,48 @@ public class BrushDrawer : MonoBehaviour
         drawer.Apply();
     }
 
-    // ================= TOOLS =================
-
     public void SetBrushTool() =>
-        currentTool = new BrushTool(this, repository); // убрал drawer
+        currentTool = new BrushTool(this, repository); 
 
     public void SetLineTool() =>
         currentTool = new LineTool(this, drawer, repository);
 
     public void SetFinishTool() =>
-        currentTool = new PointTool(this, repository, Tool.Finish); // убрал drawer
+        currentTool = new PointTool(this, repository, Tool.Finish);
 
     public void SetFakeFinishTool() =>
-        currentTool = new PointTool(this, repository, Tool.FakeFinish); // убрал drawer
+        currentTool = new PointTool(this, repository, Tool.FakeFinish); 
 
     public void SetBallSpawnTool() =>
-        currentTool = new PointTool(this, repository, Tool.BallSpawn); // убрал drawer
+        currentTool = new PointTool(this, repository, Tool.BallSpawn);
 
-    // ================= SAVE/LOAD =================
+    public void SetEraserTool()
+    {
+        currentTool = new EraserTool(this, repository);
+    }
+
 
     public void Save()
     {
         SaveLoadService.Save(repository, canvasShape);
     }
 
-    public void Load(int fileName)
+    public void LoadBlankCanvas()
     {
-        var data = SaveLoadService.Load(fileName);
+        repository.strokes.Clear();
+
+        canvasShape = 0; 
+
+        SetCanvasSquare(); 
+
+        RedrawAll();
+
+        Debug.Log("Blank canvas loaded");
+    }
+
+    public void Load(int levelId)
+    {
+        var data = SaveLoadService.Load(levelId);
         if (data == null) return;
 
         repository.strokes = data.strokes;
@@ -194,7 +204,6 @@ public class BrushDrawer : MonoBehaviour
         RedrawAll();
     }
 
-    // ================= UNDO/REDO =================
 
     public void Undo()
     {

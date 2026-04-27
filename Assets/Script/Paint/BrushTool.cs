@@ -21,7 +21,6 @@ public class BrushTool : IDrawTool
         points.Add(pos);
         lastPos = pos;
 
-        // Рисуем точку сразу
         controller.drawer.DrawCircle(controller.ToTexture(pos), controller.brushColor, controller.brushSize);
         controller.drawer.Apply();
     }
@@ -32,7 +31,6 @@ public class BrushTool : IDrawTool
 
         points.Add(pos);
 
-        // Рисуем линию между последней и текущей точкой
         controller.drawer.DrawLine(controller.ToTexture(lastPos.Value), controller.ToTexture(pos), controller.brushColor, controller.brushSize);
         controller.drawer.Apply();
 

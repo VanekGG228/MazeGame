@@ -186,27 +186,33 @@ public class DatabaseManager : MonoBehaviour
         return levels;
     }
 
-    public List<Vector3> GetTrajectoryForAttempt(int attemptId)
+    public List<Vector2> GetTrajectoryForAttempt(int attemptId)
     {
-        List<Vector3> points = new List<Vector3>();
+        List<Vector2> points = new List<Vector2>();
+
         using var connection = new SqliteConnection(dbPath);
         connection.Open();
+
         using var cmd = connection.CreateCommand();
         cmd.CommandText = @"
-            SELECT posX, posY, posZ
-            FROM TrajectoryPoints
-            WHERE attemptId = @id
-            ORDER BY time ASC;
-        ";
+        SELECT posX, posZ
+        FROM TrajectoryPoints
+        WHERE attemptId = @id
+        ORDER BY time ASC;
+    ";
+
         cmd.Parameters.AddWithValue("@id", attemptId);
+
         using var reader = cmd.ExecuteReader();
+
         while (reader.Read())
         {
             float x = reader.GetFloat(0);
-            float y = reader.GetFloat(1);
-            float z = reader.GetFloat(2);
-            points.Add(new Vector3(x, y, z));
+            float z = reader.GetFloat(1);
+
+            points.Add(new Vector2(x, z));
         }
+
         return points;
     }
 

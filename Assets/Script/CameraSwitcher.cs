@@ -1,57 +1,37 @@
 using UnityEngine;
 
-public class FreeCamera : MonoBehaviour
+public class CameraSwitcher : MonoBehaviour
 {
-    public float mouseSensitivity = 3f;
-    public float moveSpeed = 5f;
-    public float fastMultiplier = 2f;
+    public Camera[] cameras;
+    public KeyCode switchKey = KeyCode.Tab;
 
-    float yaw;
-    float pitch;
+    private int currentIndex = 0;
 
     void Start()
     {
-        // ВАЖНО: берём текущий поворот камеры
-        yaw = transform.eulerAngles.y;
-        pitch = transform.eulerAngles.x;
-
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        ActivateCamera(0);
     }
 
     void Update()
     {
-        Look();
-        Move();
+        if (Input.GetKeyDown(switchKey))
+        {
+            currentIndex++;
+            if (currentIndex >= cameras.Length)
+                currentIndex = 0;
+
+            ActivateCamera(currentIndex);
+        }
     }
 
-    void Look()
+    void ActivateCamera(int index)
     {
-        float mx = Input.GetAxis("Mouse X") * mouseSensitivity * 100f * Time.deltaTime;
-        float my = Input.GetAxis("Mouse Y") * mouseSensitivity * 100f * Time.deltaTime;
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            if (cameras[i] == null) continue;
+            cameras[i].gameObject.SetActive(i == index);
+        }
 
-        yaw += mx;
-        pitch -= my;
-        pitch = Mathf.Clamp(pitch, -89f, 89f);
-
-        transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
-    }
-
-    void Move()
-    {
-        float speed = moveSpeed;
-        if (Input.GetKey(KeyCode.LeftShift))
-            speed *= fastMultiplier;
-
-        Vector3 dir = Vector3.zero;
-
-        if (Input.GetKey(KeyCode.W)) dir += transform.forward;
-        if (Input.GetKey(KeyCode.S)) dir -= transform.forward;
-        if (Input.GetKey(KeyCode.A)) dir -= transform.right;
-        if (Input.GetKey(KeyCode.D)) dir += transform.right;
-        if (Input.GetKey(KeyCode.Space)) dir += Vector3.up;
-        if (Input.GetKey(KeyCode.LeftControl)) dir += Vector3.down;
-
-        transform.position += dir * speed * Time.deltaTime;
+        Debug.Log("[CameraSwitcher] Active camera: " + cameras[index].name);
     }
 }

@@ -58,6 +58,27 @@ public class BallSpawnAction : StrokeAction
     }
 }
 
+public class DeleteStrokeAction : StrokeAction
+{
+    private DrawnStroke stroke;
+
+    public DeleteStrokeAction(DrawnStroke s)
+    {
+        stroke = s;
+    }
+
+    public override void Undo(StrokeRepository repo)
+    {
+        if (!repo.strokes.Contains(stroke))
+            repo.strokes.Add(stroke);
+    }
+
+    public override void Redo(StrokeRepository repo)
+    {
+        repo.strokes.Remove(stroke);
+    }
+}
+
 // ===== Stroke Repository =====
 public class StrokeRepository
 {

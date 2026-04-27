@@ -21,8 +21,6 @@ public class IMUCalibration : MonoBehaviour
             serial = FindFirstObjectByType<SerialReader>();
 
         timerText.text = calibrationTime.ToString("F1");
-        if (instructionText != null)
-            instructionText.text = "Держите устройство ровно";
 
         StartCalibration();
     }
@@ -74,9 +72,16 @@ public class IMUCalibration : MonoBehaviour
         float offsetX = sumX / sampleCount;
         float offsetZ = sumZ / sampleCount;
 
+        Debug.Log($"[CALIBRATION] Calculated offsets: X={offsetX}, Z={offsetZ}");
+
         PlayerPrefs.SetFloat("IMU_OffsetX", offsetX);
         PlayerPrefs.SetFloat("IMU_OffsetZ", offsetZ);
         PlayerPrefs.Save();
+
+        float checkX = PlayerPrefs.GetFloat("IMU_OffsetX", -999f);
+        float checkZ = PlayerPrefs.GetFloat("IMU_OffsetZ", -999f);
+
+        Debug.Log($"[CALIBRATION] Saved & verified: X={checkX}, Z={checkZ}");
 
         UnityEngine.SceneManagement.SceneManager.LoadScene("Game");
     }
