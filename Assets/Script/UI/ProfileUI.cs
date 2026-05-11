@@ -3,6 +3,7 @@ using TMPro;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine.UI;
+using UnityEngine.Localization.Settings;
 
 public class ProfileUI : MonoBehaviour
 {
@@ -46,24 +47,36 @@ public class ProfileUI : MonoBehaviour
 
         var stats = DatabaseManager.Instance.GetStatisticsForAttempt(attemptId);
 
+        string attemptLabel = LocalizationSettings.StringDatabase.GetLocalizedString("UI", "attempt");
+        string levelLabel = LocalizationSettings.StringDatabase.GetLocalizedString("UI", "level_id");
+        string difficultyLabel = LocalizationSettings.StringDatabase.GetLocalizedString("UI", "difficulty");
+        string pointsLabel = LocalizationSettings.StringDatabase.GetLocalizedString("UI", "points");
+
         statsText.text =
-            $"Attempt: {attemptId}\n" +
-            $"Level ID: {levelId}\n" +
-            $"Difficulty: {levelData?.difficulty}\n" +
-            $"Points: {trajectory.Count}\n\n";
+            $"{attemptLabel}: {attemptId}\n" +
+            $"{levelLabel}: {levelId}\n" +
+            $"{difficultyLabel}: {levelData?.difficulty}\n" +
+            $"{pointsLabel}: {trajectory.Count}\n\n";
 
         if (stats != null)
         {
+            string distanceLabel = LocalizationSettings.StringDatabase.GetLocalizedString("UI", "distance");
+            string avgSpeedLabel = LocalizationSettings.StringDatabase.GetLocalizedString("UI", "avg_speed");
+            string maxSpeedLabel = LocalizationSettings.StringDatabase.GetLocalizedString("UI", "max_speed");
+            string collisionsLabel = LocalizationSettings.StringDatabase.GetLocalizedString("UI", "collisions");
+            string durationLabel = LocalizationSettings.StringDatabase.GetLocalizedString("UI", "duration");
+
             statsText.text +=
-                $"Distance: {stats.distance:F2}\n" +
-                $"Avg Speed: {stats.avgSpeed:F2}\n" +
-                $"Max Speed: {stats.maxSpeed:F2}\n" +
-                $"Collisions: {stats.collisions}\n" +
-                $"Duration: {FormatTime(stats.duration)}";
+                $"{distanceLabel}: {stats.distance:F2}\n" +
+                $"{avgSpeedLabel}: {stats.avgSpeed:F2}\n" +
+                $"{maxSpeedLabel}: {stats.maxSpeed:F2}\n" +
+                $"{collisionsLabel}: {stats.collisions}\n" +
+                $"{durationLabel}: {FormatTime(stats.duration)}";
         }
         else
         {
-            statsText.text += "\nNo statistics available";
+            string noStats = LocalizationSettings.StringDatabase.GetLocalizedString("UI", "no_stats");
+            statsText.text += $"\n{noStats}";
         }
     }
 

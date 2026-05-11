@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: UI Shared Data
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.SharedTableData
+  m_TableCollectionName: UI
+  m_TableCollectionNameGuidString: 4da597515d554d74081aa2847c212f46
+  m_Entries:
+  - m_Id: 9438826496
+    m_Key: attempt
+    m_Metadata:
+      m_Items: []
+  - m_Id: 179794677760
+    m_Key: level_id
+    m_Metadata:
+      m_Items: []
+  - m_Id: 212342476800
+    m_Key: difficulty
+    m_Metadata:
+      m_Items: []
+  - m_Id: 254528786432
+    m_Key: points
+    m_Metadata:
+      m_Items: []
+  - m_Id: 286233530368
+    m_Key: distance
+    m_Metadata:
+      m_Items: []
+  - m_Id: 330223390720
+    m_Key: avg_speed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 359587713024
+    m_Key: max_speed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 366365708288
+    m_Key: collisions
+    m_Metadata:
+      m_Items: []
+  - m_Id: 368378974208
+    m_Key: duration
+    m_Metadata:
+      m_Items: []
+  - m_Id: 369586933760
+    m_Key: no_stats
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7951307313152
+    m_Key: time
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8002507182080
+    m_Key: speed
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 9221887725914554428
+  references:
+    version: 2
+    RefIds:
+    - rid: 9221887725914554428
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1777623390913

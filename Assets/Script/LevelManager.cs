@@ -21,7 +21,8 @@ public class LevelManager : MonoBehaviour
 
     [Header("Line")]
     public float cubeHeight = 0.5f;
-    
+    [Header("Walls")]
+    public float wallYOffset = 1.5f;
 
     private GameObject currentBoard;
     private GameObject currentBall;
@@ -181,8 +182,8 @@ public class LevelManager : MonoBehaviour
             used.Add(point);
 
             Vector3 pos = ConvertToWorld(point);
+            pos.y = wallYOffset-0.3f;
 
-            // 👉 ограничение круга
             if (currentShape == 1 && !IsInsideCircle(pos))
                 continue;
 
@@ -226,6 +227,7 @@ public class LevelManager : MonoBehaviour
             return;
 
         Vector3 center = (start + end) / 2;
+        center.y = wallYOffset;
         Vector3 dir = end - start;
         float length = dir.magnitude;
 

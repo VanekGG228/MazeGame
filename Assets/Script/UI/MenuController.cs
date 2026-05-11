@@ -37,7 +37,6 @@ public class MenuController : MonoBehaviour
 
         if (graphArea.activeSelf || statsText.gameObject.activeSelf)
         {
-            // Скрываем график и статистику
             graphArea.SetActive(false);
             statsText.gameObject.SetActive(false);
      
@@ -46,7 +45,6 @@ public class MenuController : MonoBehaviour
         }
         else
         {
-            // Иначе возвращаемся в главное меню
             profilePanel.SetActive(false);
             mainMenuPanel.SetActive(true);
         }

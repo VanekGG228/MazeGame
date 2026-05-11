@@ -116,13 +116,22 @@ public class StatisticsManager : MonoBehaviour
     void UpdateUI(float speed)
     {
         if (speedText != null)
-            speedText.text = $"Speed: {speed:F2}";
+        {
+            string speedLabel = L.Get("UI", "speed");
+            speedText.text = $"{speedLabel}: {speed:F2}";
+        }
 
         if (collisionText != null)
-            collisionText.text = $"Collisions: {collisionCount}";
+        {
+            string collisionLabel = L.Get("UI", "collisions");
+            collisionText.text = $"{collisionLabel}: {collisionCount}";
+        }
 
         if (timeText != null)
-            timeText.text = $"Time: {levelTime:F1}";
+        {
+            string timeLabel = L.Get("UI", "time");
+            timeText.text = $"{timeLabel}: {levelTime:F1}";
+        }
     }
 
     public void RegisterCollision()

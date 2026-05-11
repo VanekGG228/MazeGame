@@ -1,10 +1,13 @@
 using UnityEngine;
 using UnityEngine.Localization.Settings;
+using System;
 using System.Collections;
 
 public class LanguageManager : MonoBehaviour
 {
     public static LanguageManager Instance;
+
+    public static event Action OnLanguageChanged;
 
     void Awake()
     {
@@ -12,7 +15,7 @@ public class LanguageManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            StartCoroutine(LoadLanguage());
+            StartCoroutine(Init());
         }
         else
         {
@@ -20,7 +23,7 @@ public class LanguageManager : MonoBehaviour
         }
     }
 
-    IEnumerator LoadLanguage()
+    IEnumerator Init()
     {
         yield return LocalizationSettings.InitializationOperation;
 
@@ -30,6 +33,24 @@ public class LanguageManager : MonoBehaviour
             LocalizationSettings.AvailableLocales.Locales[index];
     }
 
+    public void SetLanguage(int index)
+    {
+        StartCoroutine(SetLanguageRoutine(index));
+    }
+
+    IEnumerator SetLanguageRoutine(int index)
+    {
+        yield return LocalizationSettings.InitializationOperation;
+
+        LocalizationSettings.SelectedLocale =
+            LocalizationSettings.AvailableLocales.Locales[index];
+
+        PlayerPrefs.SetInt("lang", index);
+        PlayerPrefs.Save();
+
+        OnLanguageChanged?.Invoke();
+    }
+
     public void ToggleLanguage()
     {
         int currentIndex = LocalizationSettings.AvailableLocales.Locales
@@ -37,10 +58,6 @@ public class LanguageManager : MonoBehaviour
 
         int newIndex = (currentIndex == 0) ? 1 : 0;
 
-        LocalizationSettings.SelectedLocale =
-            LocalizationSettings.AvailableLocales.Locales[newIndex];
-
-        PlayerPrefs.SetInt("lang", newIndex);
-        PlayerPrefs.Save();
+        SetLanguage(newIndex);
     }
 }
