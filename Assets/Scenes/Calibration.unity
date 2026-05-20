@@ -611,7 +611,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66ede344c685898409d3aa42d4ad3e0f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SerialReader
-  portName: COM6
+  portName: COM7
   baudRate: 115200
   imu:
   - 0
